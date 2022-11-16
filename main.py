@@ -1,3 +1,5 @@
+import re
+from re import search
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from notion_client import Client
@@ -13,6 +15,7 @@ def main():
     send_data_to_notion(hikes_to_notion)
 
 
+# Get all the hikes urls. Go to the main page, build the url for all the possible pages and scrap all hikes urls
 def get_all_hikes_urls():
     hikes_urls = []
     url = 'https://www.bergtour-online.de/suchergebnisse/?slg=post&mdf_cat=231&page_mdf=ad6f7ebcb07233055155f8945d15e184'
@@ -46,6 +49,7 @@ def create_soup(url):
     return soup
 
 
+# Go to each hike and scrap its info. First the title, then the contents regarding the hike.
 def scrap_hikes(hikes, hikes_to_notion):
     for hike_url in hikes:
         soup = create_soup(hike_url)
@@ -61,36 +65,78 @@ def scrap_hikes(hikes, hikes_to_notion):
         hikes_to_notion[title] = info_as_json
 
 
+# Beautify the fields of each hike
+def beautify_hike_data(hike_name, hike_data):
+    print(hike_name)
+    print(hike_data)
+    hike_formatted = {'Hike': {'type': 'title', 'title': [{'type': 'text', 'text': {'content': format_hike_name(hike_name)}}]}}
+    hike_formatted['Art'] = {"Option": {"select": format_art(hike_data[hike_name]['Art'])}}
+    return hike_formatted
+
+
+def format_hike_name(hike_name):
+    return hike_name.split(' (')[0]
+
+
+def format_art(art):
+    if art is None:
+        return {"name": "N/A", "color": "gray"}
+    elif search('.*mittel.*', art, flags=re.IGNORECASE) or search('.*mittle.*', art, flags=re.IGNORECASE):
+        return {"name": art.split(" (")[0], "color": "yellow"}
+    elif search('.*einfache.*', art, flags=re.IGNORECASE) or search('.*leichte.*', art, flags=re.IGNORECASE):
+        return {"name": art.split(" (")[0], "color": "blue"}
+    elif search('.*schwere.*', art, flags=re.IGNORECASE) or search('.*schwarz.*', art, flags=re.IGNORECASE):
+        return {"name": art.split(" (")[0], "color": "red"}
+    else:
+        return {"name": art.split(" (")[0], "color": "purple"}
+
+
+def format_aurustung(aurustung):
+
+
 def send_data_to_notion(hikes):
     notion = Client(auth=secret_key)
     hikes_db = notion.databases.create(parent={"type": "page_id", "page_id": page_id},
-                            title=[{
-                                "type": "text",
-                                "text": {
-                                    "content": "Hikes List"
-                                }
-                            }],
-                            properties={"Hike": {"title": {}},
-                                        "Art": {"rich_text": {}},
-                                        "Comment": {"rich_text": {}},
-                                        "H\u00f6henmeter": {"rich_text": {}},
-                                        "Gehzeit": {"rich_text": {}},
-                                        "Kondition": {"rich_text": {}},
-                                        "Technik": {"rich_text": {}},
-                                        "Rundtour": {"rich_text": {}},
-                                        "Ausr\u00fcstung": {"rich_text": {}},
-                                        "Link": {"url": {}}})
+                                       title=[{
+                                           "type": "text",
+                                           "text": {
+                                               "content": "Hikes List"
+                                           }
+                                       }],
+                                       properties={"Hike": {"title": {}},
+                                                   "Art": {"rich_text": {}},
+                                                   "Comment": {"rich_text": {}},
+                                                   "H\u00f6henmeter": {"rich_text": {}},
+                                                   "Gehzeit": {"rich_text": {}},
+                                                   "Kondition": {"rich_text": {}},
+                                                   "Technik": {"rich_text": {}},
+                                                   "Rundtour": {"rich_text": {}},
+                                                   "Ausr\u00fcstung": {"rich_text": {}},
+                                                   "Link": {"url": {}}})
     for hike in hikes:
+        beautify_hike_data(hike, hikes[hike])
+        exit(0)
         hike_data = {'Hike': {'type': 'title', 'title': [{'type': 'text', 'text': {'content': hike}}]}}
-        hike_data['Art'] = {'rich_text': [{'text': {'content': hikes[hike]['Art']}}]} if 'Art' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Ausr\u00fcstung'] = {'rich_text': [{'text': {'content': hikes[hike]['Ausr\u00fcstung']}}]} if 'Ausr\u00fcstung' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Comment'] = {'rich_text': [{'text': {'content': hikes[hike]['Comment']}}]} if 'Comment' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Gehzeit'] = {'rich_text': [{'text': {'content': hikes[hike]['Gehzeit']}}]} if 'Gehzeit' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['H\u00f6henmeter'] = {'rich_text': [{'text': {'content': hikes[hike]['H\u00f6henmeter']}}]} if 'H\u00f6henmeter' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Kondition'] = {'rich_text': [{'text': {'content': hikes[hike]['Kondition']}}]} if 'Kondition' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
+        hike_data['Art'] = {'rich_text': [{'text': {'content': hikes[hike]['Art']}}]} if 'Art' in hikes[hike] else {
+            'rich_text': [{'text': {'content': ''}}]}
+        hike_data['Ausr\u00fcstung'] = {
+            'rich_text': [{'text': {'content': hikes[hike]['Ausr\u00fcstung']}}]} if 'Ausr\u00fcstung' in hikes[
+            hike] else {'rich_text': [{'text': {'content': ''}}]}
+        hike_data['Comment'] = {'rich_text': [{'text': {'content': hikes[hike]['Comment']}}]} if 'Comment' in hikes[
+            hike] else {'rich_text': [{'text': {'content': ''}}]}
+        hike_data['Gehzeit'] = {'rich_text': [{'text': {'content': hikes[hike]['Gehzeit']}}]} if 'Gehzeit' in hikes[
+            hike] else {'rich_text': [{'text': {'content': ''}}]}
+        hike_data['H\u00f6henmeter'] = {
+            'rich_text': [{'text': {'content': hikes[hike]['H\u00f6henmeter']}}]} if 'H\u00f6henmeter' in hikes[
+            hike] else {'rich_text': [{'text': {'content': ''}}]}
+        hike_data['Kondition'] = {'rich_text': [{'text': {'content': hikes[hike]['Kondition']}}]} if 'Kondition' in \
+                                                                                                     hikes[hike] else {
+            'rich_text': [{'text': {'content': ''}}]}
         hike_data['Link'] = {'url': hikes[hike]['url']}
-        hike_data['Rundtour'] = {'rich_text': [{'text': {'content': hikes[hike]['Rundtour']}}]} if 'Rundtour' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Technik'] = {'rich_text': [{'text': {'content': hikes[hike]['Technik']}}]} if 'Technik' in hikes[hike] else {'rich_text': [{'text': {'content': ''}}]}
+        hike_data['Rundtour'] = {'rich_text': [{'text': {'content': hikes[hike]['Rundtour']}}]} if 'Rundtour' in hikes[
+            hike] else {'rich_text': [{'text': {'content': ''}}]}
+        hike_data['Technik'] = {'rich_text': [{'text': {'content': hikes[hike]['Technik']}}]} if 'Technik' in hikes[
+            hike] else {'rich_text': [{'text': {'content': ''}}]}
 
         notion.pages.create(parent={
             "database_id": hikes_db['id']
