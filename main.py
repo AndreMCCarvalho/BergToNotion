@@ -52,25 +52,32 @@ def create_soup(url):
 # Go to each hike and scrap its info. First the title, then the contents regarding the hike.
 def scrap_hikes(hikes, hikes_to_notion):
     for hike_url in hikes:
-        soup = create_soup(hike_url)
-        title = soup.body.find("h1", {"class": "omc-post-heading-standard"}).text
-        article = soup.body.find("article", {"id": "omc-full-article"})
-        hike_info = article.find("ul")
-        info_as_json = {'url': hike_url}
-        for li in hike_info:
-            line_info = li.text.split(':')
-            if len(line_info) > 1:
-                info_as_json[line_info[0]] = line_info[1].strip()
-            info_as_json['Comment'] = line_info[0]
-        hikes_to_notion[title] = info_as_json
+        try:
+            soup = create_soup(hike_url)
+            title = soup.body.find("h1", {"class": "omc-post-heading-standard"}).text
+            article = soup.body.find("article", {"id": "omc-full-article"})
+            hike_info = article.find("ul")
+            info_as_json = {'url': hike_url}
+            for li in hike_info:
+                line_info = li.text.split(':')
+                if len(line_info) > 1:
+                    info_as_json[line_info[0]] = line_info[1].strip()
+                info_as_json['Comment'] = line_info[0]
+            hikes_to_notion[title] = info_as_json
+        except:
+            continue
 
 
 # Beautify the fields of each hike
-def beautify_hike_data(hike_name, hike_data):
-    print(hike_name)
+def beautify_hike_data(hike_title, hike_data):
+    print(hike_title)
     print(hike_data)
-    hike_formatted = {'Hike': {'type': 'title', 'title': [{'type': 'text', 'text': {'content': format_hike_name(hike_name)}}]}}
-    hike_formatted['Art'] = {"Option": {"select": format_art(hike_data[hike_name]['Art'])}}
+    hike_name = format_hike_name(hike_title)
+    hike_formatted = {'Hike': {'type': 'title', 'title': [{'type': 'text', 'text': {'content': hike_name}}]}}
+    hike_formatted['Art'] = {"Option": {"select": format_art(hike_data['Art'])}}
+    hike_formatted['Ausr\u00fcstung'] = {"title": [{ "type": "text", "text": { "content": hike_data['Ausr\u00fcstung']}}]}
+    hike_formatted['Comment'] = {"Option": {"select": hike_data['Comment']}}
+    hike_formatted['Gehzeit'] = {"Option": {"select": calculate_number_of_hours(hike_title)}}
     return hike_formatted
 
 
@@ -90,9 +97,8 @@ def format_art(art):
     else:
         return {"name": art.split(" (")[0], "color": "purple"}
 
-
-def format_aurustung(aurustung):
-
+def calculate_number_of_hours(title):
+    return search('.?.?:.?.?h', title, flags=re.IGNORECASE).group(0).strip()
 
 def send_data_to_notion(hikes):
     notion = Client(auth=secret_key)
