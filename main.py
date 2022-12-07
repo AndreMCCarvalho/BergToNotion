@@ -74,10 +74,13 @@ def beautify_hike_data(hike_title, hike_data):
     print(hike_data)
     hike_name = format_hike_name(hike_title)
     hike_formatted = {'Hike': {'type': 'title', 'title': [{'type': 'text', 'text': {'content': hike_name}}]}}
-    hike_formatted['Art'] = {"Option": {"select": format_art(hike_data['Art'])}}
-    hike_formatted['Ausr\u00fcstung'] = {"title": [{ "type": "text", "text": { "content": hike_data['Ausr\u00fcstung']}}]}
-    hike_formatted['Comment'] = {"Option": {"select": hike_data['Comment']}}
-    hike_formatted['Gehzeit'] = {"Option": {"select": calculate_number_of_hours(hike_title)}}
+    hike_formatted['Art'] = {'Option': {'select': format_art(hike_data['Art'])}}
+    hike_formatted['Ausr\u00fcstung'] = {'title': [{ 'type': 'text', 'text': { 'content': hike_data['Ausr\u00fcstung']}}]}
+    hike_formatted['Comment'] = {'Option': {'select': hike_data['Comment']}}
+    hike_formatted['Gehzeit'] = {'Option': {'select': calculate_number_of_hours(hike_title)}}
+    hike_formatted['H\u00f6henmeter'] = {'Option': {'select': calculate_height(hike_title)}}
+    hike_formatted['Rundtour'] = {'Option"': {'select': format_rundtour(hike_data['Rundtour'])}}
+    hike_formatted['Link'] = {'url': hike_data['url']}
     return hike_formatted
 
 
@@ -97,8 +100,25 @@ def format_art(art):
     else:
         return {"name": art.split(" (")[0], "color": "purple"}
 
+
 def calculate_number_of_hours(title):
     return search('.?.?:.?.?h', title, flags=re.IGNORECASE).group(0).strip()
+
+
+def calculate_height(title):
+    return search('\d*hm', title, flags=re.IGNORECASE).group(0).split('hm')[0].strip()
+
+
+def format_rundtour(rundtour):
+    if rundtour is None:
+        return {"name": "N/A", "color": "gray"}
+    elif search('.*ja.*', rundtour, flags=re.IGNORECASE):
+        return {"name": rundtour.split(" (")[0], "color": "green"}
+    elif search('.*nein.*', rundtour, flags=re.IGNORECASE):
+        return {"name": rundtour.split(" (")[0], "color": "red"}
+    else:
+        return {"name": rundtour.split(" (")[0], "color": "yellow"}
+
 
 def send_data_to_notion(hikes):
     notion = Client(auth=secret_key)
@@ -110,43 +130,17 @@ def send_data_to_notion(hikes):
                                            }
                                        }],
                                        properties={"Hike": {"title": {}},
-                                                   "Art": {"rich_text": {}},
-                                                   "Comment": {"rich_text": {}},
+                                                   "Art": {"select": {}},
+                                                   "Comment": {"select": {}},
                                                    "H\u00f6henmeter": {"rich_text": {}},
-                                                   "Gehzeit": {"rich_text": {}},
-                                                   "Kondition": {"rich_text": {}},
-                                                   "Technik": {"rich_text": {}},
-                                                   "Rundtour": {"rich_text": {}},
+                                                   "Gehzeit": {"select": {}},
+                                                   "Rundtour": {"select": {}},
                                                    "Ausr\u00fcstung": {"rich_text": {}},
                                                    "Link": {"url": {}}})
     for hike in hikes:
-        beautify_hike_data(hike, hikes[hike])
-        exit(0)
-        hike_data = {'Hike': {'type': 'title', 'title': [{'type': 'text', 'text': {'content': hike}}]}}
-        hike_data['Art'] = {'rich_text': [{'text': {'content': hikes[hike]['Art']}}]} if 'Art' in hikes[hike] else {
-            'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Ausr\u00fcstung'] = {
-            'rich_text': [{'text': {'content': hikes[hike]['Ausr\u00fcstung']}}]} if 'Ausr\u00fcstung' in hikes[
-            hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Comment'] = {'rich_text': [{'text': {'content': hikes[hike]['Comment']}}]} if 'Comment' in hikes[
-            hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Gehzeit'] = {'rich_text': [{'text': {'content': hikes[hike]['Gehzeit']}}]} if 'Gehzeit' in hikes[
-            hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['H\u00f6henmeter'] = {
-            'rich_text': [{'text': {'content': hikes[hike]['H\u00f6henmeter']}}]} if 'H\u00f6henmeter' in hikes[
-            hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Kondition'] = {'rich_text': [{'text': {'content': hikes[hike]['Kondition']}}]} if 'Kondition' in \
-                                                                                                     hikes[hike] else {
-            'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Link'] = {'url': hikes[hike]['url']}
-        hike_data['Rundtour'] = {'rich_text': [{'text': {'content': hikes[hike]['Rundtour']}}]} if 'Rundtour' in hikes[
-            hike] else {'rich_text': [{'text': {'content': ''}}]}
-        hike_data['Technik'] = {'rich_text': [{'text': {'content': hikes[hike]['Technik']}}]} if 'Technik' in hikes[
-            hike] else {'rich_text': [{'text': {'content': ''}}]}
-
         notion.pages.create(parent={
             "database_id": hikes_db['id']
-        }, properties=hike_data)
+        }, properties=beautify_hike_data(hike, hikes[hike]))
 
 
 main()
