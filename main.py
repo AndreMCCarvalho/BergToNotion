@@ -62,7 +62,6 @@ def scrap_hikes(hikes, hikes_to_notion):
                 line_info = li.text.split(':')
                 if len(line_info) > 1:
                     info_as_json[line_info[0]] = line_info[1].strip()
-                info_as_json['Comment'] = line_info[0]
             hikes_to_notion[title] = info_as_json
         except:
             continue
@@ -71,15 +70,18 @@ def scrap_hikes(hikes, hikes_to_notion):
 # Beautify the fields of each hike
 def beautify_hike_data(hike_title, hike_data):
     print(hike_title)
-    hike_name = format_hike_name(hike_title)
-    hike_formatted = {'Hike': {'title': [{'type': 'text', 'text': {'content': hike_name}}]}}
-    hike_formatted['Art'] = {'select': format_art(hike_data['Art'])}
-    hike_formatted['Ausr\u00fcstung'] = {'rich_text': [{'type': 'text', 'text': {'content': hike_data['Ausr\u00fcstung']}}]}
-    hike_formatted['Comment'] = {'rich_text': [{'type': 'text', 'text': {'content': hike_data['Comment']}}]}
-    hike_formatted['Gehzeit'] = {'rich_text': [{'type': 'text', 'text': {'content': calculate_number_of_hours(hike_title)}}]}
-    hike_formatted['H\u00f6henmeter'] = {'rich_text': [{'type': 'text', 'text': {'content': calculate_height(hike_title)}}]}
-    hike_formatted['Rundtour'] = {'select': format_rundtour(hike_data['Rundtour'])}
-    hike_formatted['Link'] = {'url': hike_data['url']}
+    try:
+        hike_name = format_hike_name(hike_title)
+        hike_formatted = {'Hike': {'title': [{'type': 'text', 'text': {'content': hike_name}}]}}
+        hike_formatted['Art'] = {'select': format_art(hike_data['Art'])}
+        hike_formatted['Ausr\u00fcstung'] = {'rich_text': [{'type': 'text', 'text': {'content': hike_data['Ausr\u00fcstung']}}]}
+        hike_formatted['Gehzeit'] = {'rich_text': [{'type': 'text', 'text': {'content': calculate_number_of_hours(hike_title)}}]}
+        # Change from String to number
+        hike_formatted['H\u00f6henmeter'] = {'number': calculate_height(hike_title)}
+        hike_formatted['Rundtour'] = {'select': format_rundtour(hike_data['Rundtour'])}
+        hike_formatted['Link'] = {'url': hike_data['url']}
+    except:
+        hike_formatted = {}
     return hike_formatted
 
 
@@ -112,9 +114,9 @@ def format_rundtour(rundtour):
     if rundtour is None:
         return {"name": "N/A"}
     elif search('.*ja.*', rundtour, flags=re.IGNORECASE):
-        return {"name": rundtour.split(" (")[0]}
+        return {"name": "Ja"}
     elif search('.*nein.*', rundtour, flags=re.IGNORECASE):
-        return {"name": rundtour.split(" (")[0]}
+        return {"name": "Nein"}
     else:
         return {"name": rundtour.split(" (")[0]}
 
@@ -130,16 +132,21 @@ def send_data_to_notion(hikes):
                                        }],
                                        properties={"Hike": {"title": {}},
                                                    "Art": {"select": {}},
-                                                   "Comment": {"rich_text": {}},
-                                                   "H\u00f6henmeter": {"rich_text": {}},
+                                                   "H\u00f6henmeter": {"number": {}},
                                                    "Gehzeit": {"rich_text": {}},
                                                    "Rundtour": {"select": {}},
                                                    "Ausr\u00fcstung": {"rich_text": {}},
                                                    "Link": {"url": {}}})
+
     for hike in hikes:
-        notion.pages.create(parent={
-            "database_id": hikes_db['id']
-        }, properties=beautify_hike_data(hike, hikes[hike]))
+        try:
+            hike_beautified = beautify_hike_data(hike, hikes[hike])
+            if len(hike_beautified) != 0:
+                notion.pages.create(parent={
+                    "database_id": hikes_db['id']
+                }, properties=hike_beautified)
+        except:
+            print("Error formatting hike {hike}".format(hike=hike))
 
 
 main()
