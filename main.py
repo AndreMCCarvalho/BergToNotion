@@ -71,15 +71,14 @@ def scrap_hikes(hikes, hikes_to_notion):
 # Beautify the fields of each hike
 def beautify_hike_data(hike_title, hike_data):
     print(hike_title)
-    print(hike_data)
     hike_name = format_hike_name(hike_title)
-    hike_formatted = {'Hike': {'type': 'title', 'title': [{'type': 'text', 'text': {'content': hike_name}}]}}
-    hike_formatted['Art'] = {'Option': {'select': format_art(hike_data['Art'])}}
-    hike_formatted['Ausr\u00fcstung'] = {'title': [{ 'type': 'text', 'text': { 'content': hike_data['Ausr\u00fcstung']}}]}
-    hike_formatted['Comment'] = {'Option': {'select': hike_data['Comment']}}
-    hike_formatted['Gehzeit'] = {'Option': {'select': calculate_number_of_hours(hike_title)}}
-    hike_formatted['H\u00f6henmeter'] = {'Option': {'select': calculate_height(hike_title)}}
-    hike_formatted['Rundtour'] = {'Option"': {'select': format_rundtour(hike_data['Rundtour'])}}
+    hike_formatted = {'Hike': {'title': [{'type': 'text', 'text': {'content': hike_name}}]}}
+    hike_formatted['Art'] = {'select': format_art(hike_data['Art'])}
+    hike_formatted['Ausr\u00fcstung'] = {'rich_text': [{'type': 'text', 'text': {'content': hike_data['Ausr\u00fcstung']}}]}
+    hike_formatted['Comment'] = {'rich_text': [{'type': 'text', 'text': {'content': hike_data['Comment']}}]}
+    hike_formatted['Gehzeit'] = {'rich_text': [{'type': 'text', 'text': {'content': calculate_number_of_hours(hike_title)}}]}
+    hike_formatted['H\u00f6henmeter'] = {'rich_text': [{'type': 'text', 'text': {'content': calculate_height(hike_title)}}]}
+    hike_formatted['Rundtour'] = {'select': format_rundtour(hike_data['Rundtour'])}
     hike_formatted['Link'] = {'url': hike_data['url']}
     return hike_formatted
 
@@ -90,15 +89,15 @@ def format_hike_name(hike_name):
 
 def format_art(art):
     if art is None:
-        return {"name": "N/A", "color": "gray"}
+        return {"name": "N/A"}
     elif search('.*mittel.*', art, flags=re.IGNORECASE) or search('.*mittle.*', art, flags=re.IGNORECASE):
-        return {"name": art.split(" (")[0], "color": "yellow"}
+        return {"name": "Mittel"}
     elif search('.*einfache.*', art, flags=re.IGNORECASE) or search('.*leichte.*', art, flags=re.IGNORECASE):
-        return {"name": art.split(" (")[0], "color": "blue"}
+        return {"name": "Einfache"}
     elif search('.*schwere.*', art, flags=re.IGNORECASE) or search('.*schwarz.*', art, flags=re.IGNORECASE):
-        return {"name": art.split(" (")[0], "color": "red"}
+        return {"name": "Schwere"}
     else:
-        return {"name": art.split(" (")[0], "color": "purple"}
+        return {"name": art.split(" (")[0]}
 
 
 def calculate_number_of_hours(title):
@@ -111,13 +110,13 @@ def calculate_height(title):
 
 def format_rundtour(rundtour):
     if rundtour is None:
-        return {"name": "N/A", "color": "gray"}
+        return {"name": "N/A"}
     elif search('.*ja.*', rundtour, flags=re.IGNORECASE):
-        return {"name": rundtour.split(" (")[0], "color": "green"}
+        return {"name": rundtour.split(" (")[0]}
     elif search('.*nein.*', rundtour, flags=re.IGNORECASE):
-        return {"name": rundtour.split(" (")[0], "color": "red"}
+        return {"name": rundtour.split(" (")[0]}
     else:
-        return {"name": rundtour.split(" (")[0], "color": "yellow"}
+        return {"name": rundtour.split(" (")[0]}
 
 
 def send_data_to_notion(hikes):
@@ -131,9 +130,9 @@ def send_data_to_notion(hikes):
                                        }],
                                        properties={"Hike": {"title": {}},
                                                    "Art": {"select": {}},
-                                                   "Comment": {"select": {}},
+                                                   "Comment": {"rich_text": {}},
                                                    "H\u00f6henmeter": {"rich_text": {}},
-                                                   "Gehzeit": {"select": {}},
+                                                   "Gehzeit": {"rich_text": {}},
                                                    "Rundtour": {"select": {}},
                                                    "Ausr\u00fcstung": {"rich_text": {}},
                                                    "Link": {"url": {}}})
