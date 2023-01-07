@@ -4,8 +4,8 @@ from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from notion_client import Client
 
-secret_key = 'secret_Te6NxO4UQbPlJngCLWvFrzJjgsrLrUkFdLsg2EdgwSU'
-page_id = 'd6553af86a5a4b4391053dbca7344eec'
+secret_key = 'XXXXXX'
+page_id = 'XXXXXXX'
 
 
 def main():
@@ -77,7 +77,7 @@ def beautify_hike_data(hike_title, hike_data):
         hike_formatted['Ausr\u00fcstung'] = {'rich_text': [{'type': 'text', 'text': {'content': hike_data['Ausr\u00fcstung']}}]}
         hike_formatted['Gehzeit'] = {'rich_text': [{'type': 'text', 'text': {'content': calculate_number_of_hours(hike_title)}}]}
         # Change from String to number
-        hike_formatted['H\u00f6henmeter'] = {'number': calculate_height(hike_title)}
+        hike_formatted['H\u00f6henmeter'] = {'number': int(calculate_height(hike_title))}
         hike_formatted['Rundtour'] = {'select': format_rundtour(hike_data['Rundtour'])}
         hike_formatted['Link'] = {'url': hike_data['url']}
     except:
